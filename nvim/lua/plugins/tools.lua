@@ -175,6 +175,7 @@ return {
       delay = 350,
       icons = { mappings = true, rules = false },
       spec = {
+        { "<leader>a", group = "claude" },
         { "<leader>b", group = "buffer" },
         { "<leader>c", group = "code / C++" },
         { "<leader>d", group = "debug" },

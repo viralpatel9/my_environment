@@ -67,7 +67,7 @@ window; in the shell, `envhelp` (or `Ctrl-O`) prints the shell half.
 | `<Space>fr` `<Space>fb` | recent files / open buffers |
 | `<Space>fs` `<Space>fS` | symbols in this file / in the workspace |
 | `<Space>fk` `<Space>fh` | search keymaps / help |
-| `<Space>e` `<Space>E` | toggle file tree / reveal current file in it |
+| `<Space>e` `<Space>E` / `<C-n>` | toggle file tree / reveal current file in it |
 | `<Space>fy` | copy the current file's path |
 | `<S-h>` `<S-l>` | previous / next buffer |
 | `<Space>bb` `<Space>bd` `<Space>bo` | last buffer / close / close others |
@@ -130,6 +130,35 @@ In the file tree: `a` add, `d` delete, `r` rename, `x` cut, `p` paste, `?` help.
 
 **Completion (insert mode):** `<C-space>` open · `<Tab>`/`<S-Tab>` next/prev and
 snippet slots · `<CR>` accept · `<C-e>` dismiss · `<C-b>`/`<C-f>` scroll docs.
+
+---
+
+## Markdown preview
+
+| Key | Does |
+|---|---|
+| `<Space>mp` | toggle a live browser preview (Mermaid, KaTeX, sequence diagrams) |
+| `<Space>ms` | stop the preview |
+
+Requires Node.js + npm on `PATH` — the plugin builds against local Node rather
+than its own prebuilt binary, which segfaults on current glibc (see README).
+
+---
+
+## Claude Code
+
+| Key | Does |
+|---|---|
+| `<Space>ac` | toggle Claude in a right-hand split |
+| `<Space>af` | focus the Claude pane |
+| `<Space>ab` | add the current buffer to Claude's context |
+| `<Space>as` *(visual)* | send the selection to Claude |
+| `<Space>aa` `<Space>ad` | accept / reject a proposed diff |
+| `<Space>ar` `<Space>aC` | resume / continue the last session |
+| `<Space>am` | pick a model |
+
+`install.sh` installs the `claude` CLI for you (skip with `--no-claude`). Log
+in once with `claude` before using this — it opens a browser prompt.
 
 ---
 

@@ -106,6 +106,7 @@ return {
     keys = {
       { "<leader>e", "<cmd>NvimTreeToggle<CR>", desc = "File tree" },
       { "<leader>E", "<cmd>NvimTreeFindFile<CR>", desc = "Reveal file in tree" },
+      { "<C-n>", "<cmd>NvimTreeToggle<CR>", desc = "File tree" }, -- familiar from other editors
     },
     opts = {
       sort = { sorter = "case_sensitive" },

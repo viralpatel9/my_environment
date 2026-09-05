@@ -23,6 +23,8 @@ Then set your terminal font to **JetBrainsMono Nerd Font Mono** and open `nvim`.
 | **Editor** | Neovim with Catppuccin Mocha, statusline, file tree, dashboard, 48 plugins |
 | **C/C++** | clangd IntelliSense: completion, diagnostics, inlay hints, refactors, header↔source |
 | **Debugging** | nvim-dap + codelldb, breakpoints and a variable inspector on `<F5>` |
+| **Claude Code** | CLI installed by the setup script; `<Space>ac` opens it in a Neovim split, same protocol as the VS Code extension |
+| **Markdown preview** | `<Space>mp` opens a live browser preview with Mermaid, KaTeX and sequence diagrams rendered |
 | **Cheatsheets** | `envhelp` in the shell, `<Space>?` in Neovim |
 
 ---
@@ -38,6 +40,7 @@ it replaces to `~/.local/share/my_environment/backups/<timestamp>/`.
 ./install.sh --minimal       # skip fonts, extra CLI tools, debugger
 ./install.sh --no-fonts      # you already have a Nerd Font
 ./install.sh --no-nvim       # keep your existing Neovim binary
+./install.sh --no-claude     # skip the Claude Code CLI
 ./install.sh --help
 ```
 
@@ -171,11 +174,46 @@ Leader is `<Space>`. Press `<Space>?` for the full cheatsheet, or just press
 - **Jump** `s` + two characters lands anywhere on screen · `]]`/`[[` between functions
 - **Text objects** `daf` delete a function · `vic` select a class body · `cia` change an argument
 - **Debug** `<F5>` start · `<Space>db` breakpoint · `<Space>du` inspector
+- **Claude Code** `<Space>ac` toggle in a right split · `<Space>as` send selection *(visual)* · `<C-n>` file tree (also `<Space>e`)
 
 Plugins are managed by lazy.nvim (`:Lazy`) and LSP servers by Mason (`:Mason`).
 Both update themselves on a weekly check.
 
 See [CHEATSHEET.md](CHEATSHEET.md) for the printable version.
+
+---
+
+## Markdown preview with Mermaid
+
+`<Space>mp` opens the current `.md` file in your browser with live reload —
+Mermaid diagrams, KaTeX math, and sequence/flow diagrams all render as the
+real thing, not code blocks. It's [markdown-preview.nvim](https://github.com/iamcco/markdown-preview.nvim).
+
+It needs **Node.js + npm** on your `PATH`. The plugin's own auto-installer
+normally fetches a prebuilt binary instead of using Node, but that binary
+segfaults on current glibc (verified on Ubuntu 24.04, glibc 2.39 — a known
+`pkg`-snapshot/glibc incompatibility, not a config issue). This config builds
+against your local Node instead, which sidesteps it. `install.sh` does not
+install Node itself; if `npm` isn't found, `:Lazy build markdown-preview.nvim`
+will fail with a clear "npm: not found" rather than silently producing a
+preview that crashes.
+
+---
+
+## Claude Code inside Neovim
+
+`<Space>ac` opens Claude in a right-hand split — the same WebSocket-based
+integration the VS Code/Cursor extension uses, reimplemented in pure Lua by
+[coder/claudecode.nvim](https://github.com/coder/claudecode.nvim). It tracks
+your current file and visual selection as context, and shows proposed edits as
+an inline diff you accept (`<Space>aa`) or reject (`<Space>ad`) — you never
+have to leave the editor to review a change.
+
+`install.sh` installs the CLI itself (the official native installer — no Node
+required), so `claude` is already on your `PATH` by the time you open Neovim.
+The one manual step is logging in: run `claude` once and follow the browser
+prompt. If you installed a different way and `terminal_cmd` needs to point
+somewhere non-standard, set it in `nvim/lua/plugins/claude.lua`.
 
 ---
 

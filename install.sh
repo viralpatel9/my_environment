@@ -31,6 +31,7 @@ DO_NVIM=1
 DO_BLE=1
 DO_PLUGINS=1
 DO_EXTRAS=1
+DO_CLAUDE=1
 DRY_RUN=0
 ASSUME_YES=0
 
@@ -65,6 +66,7 @@ Options:
   --no-nvim      Do not install/upgrade the Neovim binary (config is still linked)
   --no-ble       Do not install ble.sh (fish-like history autosuggestions)
   --no-plugins   Do not bootstrap Neovim plugins headlessly
+  --no-claude    Do not install the Claude Code CLI
   --dry-run      Show the commands without executing them
   -y, --yes      Never prompt
   -h, --help     This help
@@ -82,6 +84,7 @@ while (( $# )); do
     --no-nvim)    DO_NVIM=0 ;;
     --no-ble)     DO_BLE=0 ;;
     --no-plugins) DO_PLUGINS=0 ;;
+    --no-claude)  DO_CLAUDE=0 ;;
     --dry-run)    DRY_RUN=1 ;;
     -y|--yes)     ASSUME_YES=1 ;;
     -h|--help)    usage; exit 0 ;;
@@ -330,6 +333,28 @@ install_extras() {
   else ok "fzf present"; fi
 }
 
+# ============================================== 6b. Claude Code CLI ========
+install_claude_code() {
+  step "Installing the Claude Code CLI"
+  if (( ! DO_CLAUDE )); then info "skipped (--no-claude)"; return 0; fi
+
+  if have claude && [[ "${FORCE_CLAUDE:-0}" != "1" ]]; then
+    ok "Claude Code already installed ($(claude --version 2>/dev/null || echo "version unknown"))"
+    return 0
+  fi
+  have curl || { warn "curl is required to install Claude Code — skipped"; return 0; }
+
+  # Native installer: no Node/npm dependency, self-updating, lands at
+  # ~/.local/bin/claude — already on PATH via bash/env.sh. This is also what
+  # the Neovim integration (plugins/claude.lua) expects to find.
+  info "downloading the native installer (claude.ai/install.sh)"
+  if run bash -c 'curl -fsSL https://claude.ai/install.sh | bash'; then
+    ok "Claude Code installed"
+  else
+    warn "Claude Code install failed — install manually later: https://claude.ai/install.sh"
+  fi
+}
+
 # ================================================================ 7. linking
 backup_and_link() {
   local src="$1" dst="$2"
@@ -414,9 +439,11 @@ summary() {
   ${C_BD}Next steps${C_RST}
     1. ${C_C}exec bash${C_RST}                     reload your shell
     2. Set your terminal font to ${C_C}JetBrainsMono Nerd Font Mono${C_RST}
-    3. ${C_C}nvim${C_RST}                          first launch finishes LSP setup
-    4. ${C_C}envhelp${C_RST}                       shell cheatsheet
+    3. ${C_C}claude${C_RST}                        log in (opens a browser once)
+    4. ${C_C}nvim${C_RST}                          first launch finishes LSP setup
+    5. ${C_C}envhelp${C_RST}                       shell cheatsheet
        ${C_C}<Space>?${C_RST} inside nvim         keybinding cheatsheet
+       ${C_C}<Space>ac${C_RST} inside nvim        Claude Code in a right-hand split
 
   ${C_BD}C/C++ IntelliSense${C_RST}
     clangd needs a ${C_C}compile_commands.json${C_RST}. Generate one with:
@@ -452,6 +479,7 @@ BANNER
   install_fonts
   install_blesh
   install_extras
+  install_claude_code
   link_configs
   bootstrap_plugins
   summary

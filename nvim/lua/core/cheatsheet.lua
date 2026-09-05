@@ -57,7 +57,7 @@ local sections = {
     { "<Space>fs",      "document symbols (functions, classes) in this file" },
     { "<Space>fS",      "symbols across the whole workspace" },
     { "<Space>fk",      "search every keymap" },
-    { "<Space>e",       "toggle the file tree      (inside: a=new  d=delete  r=rename)" },
+    { "<Space>e / <C-n>","toggle the file tree      (inside: a=new  d=delete  r=rename)" },
     { "<Space>fy",      "copy the current file's path" },
     { "<S-h> / <S-l>",  "previous / next buffer" },
     { "<Space>bb",      "back to the last buffer" },
@@ -135,6 +135,21 @@ local sections = {
     { "<Space>gb",      "blame this line" },
     { "<Space>gd",      "diff this file against the index" },
     { "<Space>gg",      "open lazygit (if installed)" },
+  }},
+
+  { "MARKDOWN PREVIEW", {
+    { "<Space>mp",      "toggle a live browser preview (renders Mermaid, KaTeX)" },
+    { "<Space>ms",      "stop the preview" },
+  }},
+
+  { "CLAUDE CODE", {
+    { "<Space>ac",      "toggle Claude in a right-hand split" },
+    { "<Space>af",      "focus the Claude pane" },
+    { "<Space>ab",      "add the current buffer to Claude's context" },
+    { "<Space>as",      "send the visual selection to Claude" },
+    { "<Space>aa / ad", "accept / reject a proposed diff" },
+    { "<Space>ar / aC", "resume / continue the last session" },
+    { "<Space>am",      "pick a model" },
   }},
 
   { "TERMINAL", {

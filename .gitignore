@@ -1,0 +1,12 @@
+# Personal, machine-specific overrides — never meant to be shared.
+bash/local.sh
+.bashrc.local
+
+# Editor/OS noise.
+.DS_Store
+*.swp
+*~
+
+# Anything you might drop here while testing.
+*.log
+/tmp/
