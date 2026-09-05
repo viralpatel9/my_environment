@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# envhelp — the shell half of the cheatsheet.
+#   envhelp            everything
+#   envhelp git        only sections matching "git"
+#   envhelp -l         list section names
+set -uo pipefail
+
+if [[ -t 1 ]]; then
+  B=$'\033[1m'; D=$'\033[2m'; R=$'\033[0m'
+  H=$'\033[38;5;183m'   # section heading  (mauve)
+  K=$'\033[38;5;150m'   # key / command    (green)
+  T=$'\033[38;5;111m'   # title            (blue)
+  N=$'\033[38;5;223m'   # note             (yellow)
+else
+  B=''; D=''; R=''; H=''; K=''; T=''; N=''
+fi
+
+section() { printf '\n%s%s▸ %s%s\n' "$B" "$H" "$1" "$R"; }
+row()     { printf '  %s%-22s%s %s\n' "$K" "$1" "$R" "$2"; }
+note()    { printf '  %s%s%s\n' "$D" "$1" "$R"; }
+
+FILTER="${1:-}"
+if [[ "$FILTER" == "-l" || "$FILTER" == "--list" ]]; then
+  printf 'suggestions navigation files git build cpp neovim keys tools\n'
+  exit 0
+fi
+
+show() { [[ -z "$FILTER" || "$1" == *"$FILTER"* ]]; }
+
+printf '%s%s  my_environment — shell cheatsheet%s\n' "$B" "$T" "$R"
+printf '  %ssuggestion engine: %s%s\n' "$D" "${MY_ENV_SUGGEST:-unknown}" "$R"
+
+if show suggestions; then
+section "HISTORY & SUGGESTIONS"
+if [[ -n "${BLE_VERSION-}" ]]; then
+  row "→ (right arrow)"   "accept the greyed-out suggestion ahead of the cursor"
+  row "Ctrl-F"            "same as right arrow"
+  row "Alt-F"             "accept just the next word of the suggestion"
+else
+  row "Up / Down"         "prefix search: type 'git ch' then Up to filter history"
+fi
+row "Ctrl-R"             "fuzzy search all history (fzf)"
+row "Alt-H"              "pick a past command and drop it on the line"
+row "Alt-."              "insert the last argument of the previous command"
+row "!!"                 "the previous command   ( sudo !!  or just: please )"
+row "!\$ / !^"            "last / first argument of the previous command"
+row "^old^new"           "rerun the previous command, substituting once"
+row "hgrep <pat>"        "grep your history"
+row "hstats"             "your 20 most-used commands"
+row "hclean"             "deduplicate the history file"
+note "history file: ${HISTFILE:-unset}  (${HISTSIZE:-?} entries, shared live between terminals)"
+fi
+
+if show navigation; then
+section "NAVIGATION"
+row ".. / ... / ...."    "up 1 / 2 / 3 directories"
+row "-"                  "back to the previous directory"
+row "up 3"               "up N directories"
+row "z <partial>"        "jump to a frequently-used directory (zoxide)"
+row "fcd"                "fuzzy-pick a directory below here"
+row "Alt-G"              "jump to the git repo root"
+row "mkcd <dir>"         "create a directory and enter it"
+row "d"                  "show the directory stack"
+row "<dirname>"          "just typing a path cd's into it (autocd)"
+fi
+
+if show files; then
+section "FILES & SEARCH"
+row "ll / la / lt"       "long list / include hidden / tree view"
+row "ff <pattern>"       "find files by name"
+row "fif <pattern>"      "find text inside files (ripgrep)"
+row "Ctrl-T"             "fuzzy file picker, inserts the path on the line"
+row "Alt-C"              "fuzzy cd"
+row "extract <archive>"  "unpack .tar.*/.zip/.7z/.rar — anything"
+row "mkarchive out.tar.zst files…" "create an archive"
+row "bak <file>"         "timestamped backup copy"
+row "cat <file>"         "syntax-highlighted (bat)"
+fi
+
+if show git; then
+section "GIT"
+row "gs / gst"           "short status / full status"
+row "ga / gaa / gap"     "add / add all / add interactively by hunk"
+row "gc / gcm 'msg'"     "commit (verbose) / commit with a message"
+row "gco / gsw / gcb"    "checkout / switch / new branch"
+row "gd / gds"           "diff working tree / diff staged"
+row "gl / gla"           "log graph (this branch / all branches)"
+row "gp / gpf / gpl"     "push / force-with-lease / pull --rebase"
+row "gstash / gpop"      "stash including untracked / pop"
+row "fgb"                "fuzzy-pick a branch to switch to"
+row "groot"              "cd to the repo root"
+fi
+
+if show build || show cpp; then
+section "C / C++ BUILD"
+row "cc-db"              "generate compile_commands.json — run this first, it is"
+note "                       what makes clangd/IntelliSense work in a project"
+row "cc-flags [flags]"   "write a compile_flags.txt for loose files"
+row "cm / cmd / cmr"     "cmake configure: default / Debug / RelWithDebInfo"
+row "cb"                 "cmake --build build -j\$(nproc)"
+row "ct"                 "ctest, showing output on failure"
+row "mj"                 "make -j\$(nproc)"
+row "ccrun file.cpp"     "compile one file with asan+ubsan and run it"
+row "ccasm file.cpp"     "show the optimised assembly (intel syntax)"
+row "gdbr ./prog args"   "run under gdb, break on crash, print a backtrace"
+fi
+
+if show neovim || show keys; then
+section "NEOVIM"
+row "v / nvim <file>"    "open the editor"
+row "<Space>?"           "the full keybinding cheatsheet, inside nvim"
+row "<Space>"            "wait a moment — which-key lists what comes next"
+row "<Space>ff / fg"     "find file / grep project"
+row "<Space>e"           "file tree"
+row "gd / gr / K"        "definition / references / hover docs"
+row "<Space>ca"          "code action    <Space>rn rename"
+row "<Space>ch"          "switch header <-> source"
+row "<F5>"               "start debugging"
+note "config lives in \$MY_ENV_ROOT/nvim — 'vconf' opens it"
+fi
+
+if show tools; then
+section "TOOLS & MISC"
+row "envhelp [section]"  "this page  (Ctrl-O anywhere on the command line)"
+row "reload"             "restart bash with the new config"
+row "colortest"          "check your terminal's colour support"
+row "whichf <name>"      "what is this? alias, function or binary — with source"
+row "hlp <cmd>"          "syntax-highlighted --help output"
+row "please"             "rerun the previous command with sudo"
+row "fkill"              "fuzzy-pick processes to kill"
+row "genpass [len]"      "random password"
+row "note <text>"        "append a timestamped line to ~/notes.md"
+row "serve"              "http server on :8000 in this directory"
+row "myip / weather"     "public IP / local forecast"
+fi
+
+printf '\n  %sfull docs: %s/README.md  ·  nvim keys: %s/CHEATSHEET.md%s\n\n' \
+  "$D" "${MY_ENV_ROOT:-~/git-repo/my_environment}" "${MY_ENV_ROOT:-~/git-repo/my_environment}" "$R"

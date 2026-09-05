@@ -1,0 +1,24 @@
+# Read via $RIPGREP_CONFIG_PATH (set in bash/env.sh).
+
+--smart-case
+--hidden
+--follow
+--max-columns=200
+--max-columns-preview
+--colors=line:fg:245
+--colors=path:fg:111
+--colors=path:style:bold
+--colors=match:fg:223
+--colors=match:style:bold
+
+# Noise that is never worth grepping in a C/C++ tree.
+--glob=!.git/
+--glob=!build/
+--glob=!cmake-build-*/
+--glob=!node_modules/
+--glob=!*.o
+--glob=!*.a
+--glob=!*.so
+--glob=!*.d
+--glob=!compile_commands.json
+--glob=!.cache/

@@ -1,0 +1,53 @@
+# ~/.inputrc — readline configuration.
+# Applies to bash and to everything else that links readline (gdb, psql, python).
+
+$include /etc/inputrc
+
+# --- completion ---------------------------------------------------------
+set completion-ignore-case on
+set completion-map-case on            # treat - and _ as equivalent
+set show-all-if-ambiguous on          # one Tab lists, don't make me press twice
+set show-all-if-unmodified on
+set completion-prefix-display-length 3
+set completion-query-items 200
+set page-completions off
+set colored-stats on                  # colour completions by file type
+set colored-completion-prefix on
+set visible-stats on                  # append / to dirs, * to executables
+set mark-symlinked-directories on
+set match-hidden-files off
+set skip-completed-text on
+
+# --- editing ------------------------------------------------------------
+set editing-mode emacs
+set bell-style none
+set expand-tilde off
+set echo-control-characters off
+set enable-bracketed-paste on         # multi-line pastes stay one entry
+
+# --- history search on the arrow keys -----------------------------------
+# Type a prefix, then Up: only history entries starting with it are offered.
+# (ble.sh replaces this with inline ghost text when it is installed.)
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+"\eOA": history-search-backward
+"\eOB": history-search-forward
+
+# Page Up / Page Down do the same thing.
+"\e[5~": history-search-backward
+"\e[6~": history-search-forward
+
+# --- word movement ------------------------------------------------------
+"\e[1;5C": forward-word            # Ctrl-Right
+"\e[1;5D": backward-word           # Ctrl-Left
+"\e[1;3C": forward-word            # Alt-Right
+"\e[1;3D": backward-word           # Alt-Left
+"\e[3;5~": kill-word               # Ctrl-Delete
+
+# --- gdb / python REPL friendliness -------------------------------------
+$if Bash
+    # Expand !! and $(...) in place with Ctrl-Alt-e
+    "\e\C-e": shell-expand-line
+    # Insert the last argument of the previous command
+    "\e.": yank-last-arg
+$endif

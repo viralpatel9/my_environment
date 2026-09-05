@@ -1,0 +1,27 @@
+# ==============================================================================
+#  my_environment — bash entry point
+#  Sourced from ~/.bashrc. Everything interactive lives in bash/*.sh
+# ==============================================================================
+
+# Non-interactive shells (scp, rsync, scripts) must stay silent and fast.
+case $- in *i*) ;; *) return ;; esac
+
+: "${MY_ENV_ROOT:="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"}"
+export MY_ENV_ROOT
+
+# ble.sh must load before anything else touches the line editor, and attach last.
+if [[ -r "${XDG_DATA_HOME:-$HOME/.local/share}/blesh/ble.sh" ]]; then
+    source "${XDG_DATA_HOME:-$HOME/.local/share}/blesh/ble.sh" --noattach
+fi
+
+for _mod in env colors history options aliases functions prompt integrations; do
+    [[ -r "$MY_ENV_ROOT/bash/$_mod.sh" ]] && source "$MY_ENV_ROOT/bash/$_mod.sh"
+done
+unset _mod
+
+# Machine-specific overrides, never committed.
+[[ -r "$HOME/.bashrc.local" ]] && source "$HOME/.bashrc.local"
+[[ -r "$MY_ENV_ROOT/bash/local.sh" ]] && source "$MY_ENV_ROOT/bash/local.sh"
+
+# Turn on the fish-like autosuggestion engine.
+[[ -n "${BLE_VERSION-}" ]] && ble-attach

@@ -1,0 +1,59 @@
+# Global fallback style, linked to ~/.clang-format.
+# Any project that ships its own .clang-format wins over this one.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+AccessModifierOffset: -4
+NamespaceIndentation: None
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignTrailingComments: true
+AlignEscapedNewlines: Left
+
+BreakBeforeBraces: Attach
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+PackConstructorInitializers: NextLine
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+SpaceAfterCStyleCast: true
+SpaceAfterTemplateKeyword: false
+Cpp11BracedListStyle: true
+
+FixNamespaceComments: true
+ShortNamespaceLines: 0
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Own header first (clang-format gives the main include priority 0).
+  - Regex: '^<[a-z_]+>$'          # C++ standard library
+    Priority: 3
+  - Regex: '^<.*\.h>$'            # C system headers
+    Priority: 4
+  - Regex: '^<.*>$'               # other third-party angle includes
+    Priority: 2
+  - Regex: '^".*"$'               # project headers
+    Priority: 1
+
+SeparateDefinitionBlocks: Always
+EmptyLineBeforeAccessModifier: LogicalBlock
+MaxEmptyLinesToKeep: 1
+---
+Language: Proto
+BasedOnStyle: Google
+ColumnLimit: 100

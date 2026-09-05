@@ -1,0 +1,60 @@
+# ~/.config/clangd/config.yaml — global clangd defaults.
+# A project-local .clangd file overrides anything here.
+
+CompileFlags:
+  # Applied when a file has no entry in compile_commands.json, so loose files
+  # and headers still get completion instead of a wall of red.
+  Add:
+    - -std=c++20
+    - -Wall
+    - -Wextra
+    - -I.
+    - -Iinclude
+    - -Isrc
+  # Strip flags that GCC accepts but clang does not understand.
+  Remove:
+    - -mno-direct-extern-access
+    - -fno-allow-store-data-races
+    - -fconserve-stack
+    - -mpreferred-stack-boundary=*
+    - -mindirect-branch*
+    - -mfunction-return*
+    - -fsanitize=bounds-strict
+    - -fno-var-tracking-assignments
+  CompilationDatabase: build
+
+Index:
+  Background: Build
+  StandardLibrary: Yes
+
+Diagnostics:
+  ClangTidy:
+    Add:
+      - bugprone-*
+      - performance-*
+      - modernize-*
+      - readability-*
+      - cppcoreguidelines-*
+    Remove:
+      # Noisy or opinionated checks that fire constantly on real codebases.
+      - modernize-use-trailing-return-type
+      - readability-identifier-length
+      - readability-magic-numbers
+      - cppcoreguidelines-avoid-magic-numbers
+      - cppcoreguidelines-pro-bounds-pointer-arithmetic
+      - cppcoreguidelines-pro-type-vararg
+  UnusedIncludes: Strict
+  MissingIncludes: None
+
+InlayHints:
+  Enabled: Yes
+  ParameterNames: Yes
+  DeducedTypes: Yes
+  Designators: Yes
+  BlockEnd: No
+
+Hover:
+  ShowAKA: Yes
+
+Completion:
+  AllScopes: Yes
