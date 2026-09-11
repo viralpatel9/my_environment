@@ -212,9 +212,8 @@ then build). `<F5>` prompts for the binary, defaulting to `build/`.
 
 | Key | Does |
 |---|---|
-| `→` or `Ctrl-F` | accept the greyed-out suggestion (ble.sh) |
-| `Alt-F` | accept one word of it |
-| `Up` / `Down` | prefix search — type `git ch`, press Up (fallback mode) |
+| `→`, `End` or `Ctrl-F` | accept the greyed-out suggestion (zsh only, zsh-autosuggestions) |
+| `Up` / `Down` | prefix search — type `git ch`, press Up (bash, and zsh too) |
 | `Ctrl-R` | fuzzy search all history |
 | `Alt-H` | pick a past command onto the line |
 | `Alt-.` | insert the last argument of the previous command |

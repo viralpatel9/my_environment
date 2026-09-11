@@ -2,6 +2,7 @@
 # ==============================================================================
 #  my_environment — portable Linux dev environment installer
 #  Bash + Neovim (C/C++ IntelliSense) + Nerd Fonts + history autosuggestions
+#  Optional: zsh + oh-my-zsh + powerlevel10k + autosuggestion plugins
 #
 #  Usage:
 #     ./install.sh                 # full install
@@ -24,11 +25,12 @@ NERD_FONTS="${NERD_FONTS:-JetBrainsMono FiraCode}"
 NVIM_VERSION="${NVIM_VERSION:-stable}"
 NVIM_MIN_MAJOR=0
 NVIM_MIN_MINOR=11
+PECO_VERSION="${PECO_VERSION:-0.6.0}"
 
 # ------------------------------------------------------------------- switches
 DO_FONTS=1
 DO_NVIM=1
-DO_BLE=1
+DO_ZSH=1
 DO_PLUGINS=1
 DO_EXTRAS=1
 DO_CLAUDE=1
@@ -64,7 +66,7 @@ Options:
   --minimal      Skip fonts, extra CLI tools and the DAP debugger
   --no-fonts     Do not download/install Nerd Fonts
   --no-nvim      Do not install/upgrade the Neovim binary (config is still linked)
-  --no-ble       Do not install ble.sh (fish-like history autosuggestions)
+  --no-zsh       Do not install zsh/oh-my-zsh/powerlevel10k/plugins
   --no-plugins   Do not bootstrap Neovim plugins headlessly
   --no-claude    Do not install the Claude Code CLI
   --dry-run      Show the commands without executing them
@@ -82,7 +84,7 @@ while (( $# )); do
     --minimal)    DO_FONTS=0; DO_EXTRAS=0 ;;
     --no-fonts)   DO_FONTS=0 ;;
     --no-nvim)    DO_NVIM=0 ;;
-    --no-ble)     DO_BLE=0 ;;
+    --no-zsh)     DO_ZSH=0 ;;
     --no-plugins) DO_PLUGINS=0 ;;
     --no-claude)  DO_CLAUDE=0 ;;
     --dry-run)    DRY_RUN=1 ;;
@@ -289,28 +291,107 @@ install_fonts() {
   info "Set your terminal font to e.g. 'JetBrainsMono Nerd Font Mono'"
 }
 
-# ============================================== 5. ble.sh (autosuggestions)
-install_blesh() {
-  step "Installing ble.sh (history autosuggestions)"
-  if (( ! DO_BLE )); then info "skipped (--no-ble)"; return 0; fi
-
+# ============================================ 5. legacy ble.sh cleanup =====
+# my_environment switched from ble.sh to zsh + oh-my-zsh + powerlevel10k for
+# autosuggestions. Machines that already ran the old installer have a stale
+# ble.sh checkout sitting around — bash/bashrc no longer sources it, so it's
+# just dead weight. Remove it.
+remove_legacy_blesh() {
   local dest="${XDG_DATA_HOME:-$HOME/.local/share}/blesh"
-  if [[ -r "$dest/ble.sh" ]] && [[ "${FORCE_BLE:-0}" != "1" ]]; then
-    ok "ble.sh already installed"
-    return 0
-  fi
-  have git make || { warn "git/make missing — skipping ble.sh"; return 0; }
+  [[ -e "$dest" ]] || return 0
+  step "Removing legacy ble.sh"
+  run rm -rf "$dest"
+  ok "removed $dest"
+}
 
+# ==================================== 5b. zsh + oh-my-zsh (autosuggestions) =
+install_peco() {
+  info "peco (fuzzy history picker for zsh-peco-history)"
+  if have peco; then ok "peco present"; return 0; fi
+
+  pkg_install peco >/dev/null 2>&1 || true
+  if have peco; then ok "peco installed (package manager)"; return 0; fi
+
+  local peco_arch
+  case "$ARCH" in
+    x86_64|amd64)  peco_arch="amd64" ;;
+    aarch64|arm64) peco_arch="arm64" ;;
+    *) warn "unrecognised arch '$ARCH' — skipping peco"; return 0 ;;
+  esac
+
+  local prefix="$STATE_DIR/peco"
   local tmp; tmp="$(mktemp -d)"
-  if run git clone --recursive --depth 1 --shallow-submodules \
-        https://github.com/akinomyoga/ble.sh.git "$tmp/ble.sh" >/dev/null 2>&1; then
-    run make -C "$tmp/ble.sh" install PREFIX="$HOME/.local" >/dev/null 2>&1 \
-      && ok "ble.sh installed to $dest" \
-      || warn "ble.sh build failed (bash fallback autosuggestions will be used)"
+  local asset="peco_${PECO_VERSION}_linux_${peco_arch}.tar.gz"
+  local url="https://github.com/peco/peco/releases/download/v${PECO_VERSION}/$asset"
+  if run curl -fsSL --retry 3 -o "$tmp/peco.tar.gz" "$url" \
+      && run tar -xzf "$tmp/peco.tar.gz" -C "$tmp" peco; then
+    run mkdir -p "$prefix"
+    run install -m 0755 "$tmp/peco" "$prefix/peco"
+    run ln -sf "$prefix/peco" "$LOCAL_BIN/peco"
+    ok "peco installed to $prefix (linked into $LOCAL_BIN)"
   else
-    warn "could not clone ble.sh (bash fallback autosuggestions will be used)"
+    warn "could not download peco — zsh-peco-history will fall back to plain Ctrl-R"
   fi
   run rm -rf "$tmp"
+}
+
+install_zsh_stack() {
+  step "Installing zsh + oh-my-zsh (autosuggestions)"
+  if (( ! DO_ZSH )); then info "skipped (--no-zsh)"; return 0; fi
+
+  if ! have zsh; then
+    info "zsh"
+    pkg_install zsh >/dev/null 2>&1 && ok "zsh installed" || warn "could not install zsh (skipped)"
+  else
+    ok "zsh present"
+  fi
+  have zsh || { warn "zsh unavailable — skipping oh-my-zsh/p10k/plugins"; return 0; }
+  have git || { warn "git missing — skipping oh-my-zsh/p10k/plugins"; return 0; }
+
+  local omz_dir="${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-zsh"
+  local ZSH_CUSTOM_DIR="$omz_dir/custom"
+
+  if [[ -r "$omz_dir/oh-my-zsh.sh" ]] && [[ "${FORCE_ZSH:-0}" != "1" ]]; then
+    ok "oh-my-zsh already installed"
+  else
+    info "oh-my-zsh (this downloads the framework)"
+    # Pre-create ~/.zshrc so the installer's KEEP_ZSHRC=yes preserves it as-is
+    # instead of writing its own template — my_environment owns ~/.zshrc's
+    # content via the guarded hook block link_configs appends later.
+    run touch "$HOME/.zshrc"
+    if ZSH="$omz_dir" RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+        run bash -c 'curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | sh' \
+        >/dev/null 2>&1; then
+      ok "oh-my-zsh installed to $omz_dir"
+    else
+      warn "oh-my-zsh install failed — skipping p10k/plugins"
+      return 0
+    fi
+  fi
+
+  local p10k_dir="$ZSH_CUSTOM_DIR/themes/powerlevel10k"
+  if [[ -d "$p10k_dir" ]] && [[ "${FORCE_ZSH:-0}" != "1" ]]; then
+    ok "powerlevel10k already installed"
+  else
+    run git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$p10k_dir" >/dev/null 2>&1 \
+      && ok "powerlevel10k installed" || warn "powerlevel10k clone failed"
+  fi
+
+  local spec name url dest
+  for spec in \
+      "zsh-autosuggestions:https://github.com/zsh-users/zsh-autosuggestions.git" \
+      "zsh-syntax-highlighting:https://github.com/zsh-users/zsh-syntax-highlighting.git" \
+      "zsh-peco-history:https://github.com/jimeh/zsh-peco-history.git"; do
+    name="${spec%%:*}"; url="${spec#*:}"; dest="$ZSH_CUSTOM_DIR/plugins/$name"
+    if [[ -d "$dest" ]] && [[ "${FORCE_ZSH:-0}" != "1" ]]; then
+      ok "$name already installed"
+    else
+      run git clone --depth=1 "$url" "$dest" >/dev/null 2>&1 \
+        && ok "$name installed" || warn "$name clone failed"
+    fi
+  done
+
+  install_peco
 }
 
 # ============================================== 6. optional extra CLI tools
@@ -356,6 +437,32 @@ install_claude_code() {
 }
 
 # ================================================================ 7. linking
+# Appends a single guarded block to $rc that sources $src, backing up $rc's
+# prior content once on first install. Used for both ~/.bashrc and ~/.zshrc.
+hook_into_rc() {
+  local rc="$1" src="$2"
+  local marker="# >>> my_environment >>>"
+  run touch "$rc"
+  if grep -qF "$marker" "$rc" 2>/dev/null; then
+    ok "$(basename "$rc") hook already present"
+    return 0
+  fi
+  if (( DRY_RUN )); then
+    info "would append my_environment hook to $rc"
+    return 0
+  fi
+  run mkdir -p "$BACKUP_DIR"
+  cp "$rc" "$BACKUP_DIR/$(basename "$rc")" 2>/dev/null || true
+  {
+    printf '\n%s\n' "$marker"
+    printf '# Managed by my_environment (%s). Remove this block to uninstall.\n' "$ENV_ROOT"
+    printf 'export MY_ENV_ROOT="%s"\n' "$ENV_ROOT"
+    printf '[ -f "%s" ] && . "%s"\n' "$src" "$src"
+    printf '# <<< my_environment <<<\n'
+  } >> "$rc"
+  ok "hooked into $(basename "$rc")"
+}
+
 backup_and_link() {
   local src="$1" dst="$2"
   if [[ -L "$dst" ]]; then
@@ -383,27 +490,11 @@ link_configs() {
   # Global clang-format only if the user has no project-level one already.
   [[ -e "$HOME/.clang-format" ]] || run ln -sfn "$ENV_ROOT/config/clang-format" "$HOME/.clang-format"
 
-  # ~/.bashrc keeps whatever it had; we append a single guarded source line.
-  local marker="# >>> my_environment >>>"
-  local rc="$HOME/.bashrc"
-  run touch "$rc"
-  if grep -qF "$marker" "$rc" 2>/dev/null; then
-    ok "~/.bashrc hook already present"
-  else
-    if (( DRY_RUN )); then
-      info "would append my_environment hook to $rc"
-    else
-      mkdir -p "$BACKUP_DIR"
-      cp "$rc" "$BACKUP_DIR/bashrc" 2>/dev/null || true
-      {
-        printf '\n%s\n' "$marker"
-        printf '# Managed by my_environment (%s). Remove this block to uninstall.\n' "$ENV_ROOT"
-        printf 'export MY_ENV_ROOT="%s"\n' "$ENV_ROOT"
-        printf '[ -f "$MY_ENV_ROOT/bash/bashrc" ] && . "$MY_ENV_ROOT/bash/bashrc"\n'
-        printf '# <<< my_environment <<<\n'
-      } >> "$rc"
-      ok "hooked into ~/.bashrc"
-    fi
+  # ~/.bashrc and ~/.zshrc keep whatever they had; we append one guarded
+  # source line to each.
+  hook_into_rc "$HOME/.bashrc" "$ENV_ROOT/bash/bashrc"
+  if have zsh; then
+    hook_into_rc "$HOME/.zshrc" "$ENV_ROOT/zsh/zshrc"
   fi
 }
 
@@ -437,13 +528,18 @@ summary() {
   ${C_G}${C_BD}my_environment is installed.${C_RST}
 
   ${C_BD}Next steps${C_RST}
-    1. ${C_C}exec bash${C_RST}                     reload your shell
+    1. ${C_C}exec bash${C_RST}                     reload your shell (or ${C_C}exec zsh${C_RST} to try zsh)
     2. Set your terminal font to ${C_C}JetBrainsMono Nerd Font Mono${C_RST}
     3. ${C_C}claude${C_RST}                        log in (opens a browser once)
     4. ${C_C}nvim${C_RST}                          first launch finishes LSP setup
     5. ${C_C}envhelp${C_RST}                       shell cheatsheet
        ${C_C}<Space>?${C_RST} inside nvim         keybinding cheatsheet
        ${C_C}<Space>ac${C_RST} inside nvim        Claude Code in a right-hand split
+
+  ${C_BD}Trying zsh${C_RST}
+    ${C_C}exec zsh${C_RST} starts it for this terminal only; ${C_C}p10k configure${C_RST} runs the
+    prompt wizard on first launch. Make it your default shell with
+    ${C_C}chsh -s "\$(command -v zsh)"${C_RST} once you're happy with it.
 
   ${C_BD}C/C++ IntelliSense${C_RST}
     clangd needs a ${C_C}compile_commands.json${C_RST}. Generate one with:
@@ -477,7 +573,8 @@ BANNER
   ensure_local_bin
   install_neovim
   install_fonts
-  install_blesh
+  remove_legacy_blesh
+  install_zsh_stack
   install_extras
   install_claude_code
   link_configs

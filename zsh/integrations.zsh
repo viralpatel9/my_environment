@@ -1,16 +1,18 @@
-# --------------------------------------------------- integrations.sh --
+# --------------------------------------------------- integrations.zsh --
 # Third-party tools + the key bindings that give you history suggestions.
 
-# ==================================================== 1. history search ====
-# bash has no inline ghost-text engine of its own; prefix-search the arrow
-# keys instead. Type `git ch` then press Up to walk only through matching
-# history entries. (Want inline suggestions? my_environment's zsh setup has
-# them via zsh-autosuggestions — see zsh/integrations.zsh.)
-bind '"\e[A": history-search-backward' 2>/dev/null
-bind '"\e[B": history-search-forward'  2>/dev/null
-bind '"\eOA": history-search-backward' 2>/dev/null
-bind '"\eOB": history-search-forward'  2>/dev/null
-MY_ENV_SUGGEST="readline prefix search (try the zsh setup for inline ghost text)"
+# ================================================ 1. autosuggestions ====
+# Inline *ghost text* from the zsh-autosuggestions plugin (loaded by
+# oh-my-zsh — see zsh/zshrc's `plugins=(...)`). The plugin binds Right-arrow
+# and End itself; Ctrl-F is added here as a third way to accept it whole.
+if (( ${+widgets[autosuggest-accept]} )); then
+    ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+    ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=245,italic'
+    bindkey '^F' autosuggest-accept 2>/dev/null
+    MY_ENV_SUGGEST="zsh-autosuggestions (→/End/Ctrl-F accepts)"
+else
+    MY_ENV_SUGGEST="zsh history search (Up/Down)"
+fi
 export MY_ENV_SUGGEST
 
 # ============================================================== 2. fzf ====
@@ -42,39 +44,40 @@ if command -v fzf >/dev/null 2>&1; then
     export FZF_CTRL_R_OPTS="--preview 'printf %s {}' --preview-window=down:4:wrap --header='history'"
     export FZF_ALT_C_OPTS="--preview 'ls --color=always {} 2>/dev/null | head -50'"
 
-    # fzf >= 0.48 ships its own bash integration; older packages use example files.
-    if fzf --bash >/dev/null 2>&1; then
-        eval "$(fzf --bash)"
+    # fzf >= 0.48 ships its own zsh integration; older packages use example files.
+    if fzf --zsh >/dev/null 2>&1; then
+        source <(fzf --zsh)
     else
-        for _f in /usr/share/doc/fzf/examples/key-bindings.bash \
-                  /usr/share/fzf/key-bindings.bash \
-                  "$HOME/.fzf/shell/key-bindings.bash"; do
-            [[ -r "$_f" ]] && { . "$_f"; break; }
+        for _f in /usr/share/doc/fzf/examples/key-bindings.zsh \
+                  /usr/share/fzf/key-bindings.zsh \
+                  "$HOME/.fzf/shell/key-bindings.zsh"; do
+            [[ -r "$_f" ]] && { source "$_f"; break; }
         done
-        for _f in /usr/share/doc/fzf/examples/completion.bash \
-                  /usr/share/fzf/completion.bash \
-                  "$HOME/.fzf/shell/completion.bash"; do
-            [[ -r "$_f" ]] && { . "$_f"; break; }
+        for _f in /usr/share/doc/fzf/examples/completion.zsh \
+                  /usr/share/fzf/completion.zsh \
+                  "$HOME/.fzf/shell/completion.zsh"; do
+            [[ -r "$_f" ]] && { source "$_f"; break; }
         done
         unset _f
     fi
 
-    # fh — pick a command out of history. Bound to Alt-H it edits the command
-    # line in place; called as a plain function it just prints the choice.
-    # The sed strips the history index *and* the HISTTIMEFORMAT timestamp.
+    # fh — pick a command out of history. As a key binding (Alt-H) it edits
+    # the command line in place; called as a plain function it just prints
+    # the choice. The sed strips fc's leading index column.
     fh() {
         local cmd
-        cmd="$(history \
-               | sed -E 's/^[[:space:]]*[0-9]+[[:space:]]+([0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]+[0-9:]+[[:space:]]+)?//' \
+        cmd="$(fc -l 1 \
+               | sed -E 's/^[[:space:]]*[0-9]+[[:space:]]+//' \
                | awk 'NF && !seen[$0]++' | tac \
                | fzf --no-sort --query="$*" --header='pick a command')" || return
-        if [[ -n "${READLINE_LINE+x}" ]]; then
-            READLINE_LINE="$cmd"; READLINE_POINT=${#cmd}
+        if [[ -n "$WIDGET" ]]; then
+            LBUFFER="$cmd"
         else
-            printf '%s\n' "$cmd"
+            print -r -- "$cmd"
         fi
     }
-    bind -x '"\eh": fh' 2>/dev/null      # Alt-H
+    zle -N fh 2>/dev/null
+    bindkey '^[h' fh 2>/dev/null                  # Alt-H
 
     # fkill — fuzzy pick a process to kill
     fkill() {
@@ -82,7 +85,7 @@ if command -v fzf >/dev/null 2>&1; then
         pid="$(ps -eo pid,ppid,pcpu,pmem,comm,args --sort=-pcpu \
                | fzf --header-lines=1 --multi --header='select processes to kill' \
                | awk '{print $1}')" || return
-        [[ -n "$pid" ]] && kill "${1:--TERM}" $pid && printf 'killed: %s\n' "$pid"
+        [[ -n "$pid" ]] && kill "${1:--TERM}" ${(z)pid} && printf 'killed: %s\n' "$pid"
     }
 
     # fcd — fuzzy cd anywhere below here
@@ -105,15 +108,15 @@ fi
 # =========================================================== 3. zoxide ====
 # `z <partial>` jumps to the directory you visit most that matches.
 if command -v zoxide >/dev/null 2>&1; then
-    eval "$(zoxide init bash --cmd z)"
+    eval "$(zoxide init zsh --cmd z)"
 fi
 
 # ============================================================ 4. direnv ====
-command -v direnv >/dev/null 2>&1 && eval "$(direnv hook bash)"
+command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
 
 # ============================================================== 5. misc ====
 # Syntax-highlighted `--help` output. Named `hlp` so the `help` builtin
-# (help while, help test, …) keeps working.
+# keeps working (zsh doesn't have one, but the name still reads best).
 if command -v bat >/dev/null 2>&1; then
     hlp() { "$@" --help 2>&1 | bat --plain --language=help --paging=never; }
 else
@@ -126,19 +129,28 @@ export GPG_TTY="$(tty 2>/dev/null)"
 # ssh-agent: reuse a running one rather than spawning a new agent per shell.
 if [[ -z "${SSH_AUTH_SOCK:-}" ]] && command -v ssh-agent >/dev/null 2>&1; then
     _agent_env="${XDG_RUNTIME_DIR:-$HOME/.cache}/ssh-agent.env"
-    [[ -r "$_agent_env" ]] && . "$_agent_env" >/dev/null
+    [[ -r "$_agent_env" ]] && source "$_agent_env" >/dev/null
     if ! kill -0 "${SSH_AGENT_PID:-0}" 2>/dev/null; then
-        ssh-agent -s > "$_agent_env" 2>/dev/null && . "$_agent_env" >/dev/null
+        ssh-agent -s > "$_agent_env" 2>/dev/null && source "$_agent_env" >/dev/null
     fi
     unset _agent_env
 fi
 
 # ============================================== 6. extra key bindings ====
-# Ctrl-G stays readline's abort; Alt-* is used for our additions.
-__jump_git_root() { cd "$(git rev-parse --show-toplevel 2>/dev/null || printf .)" || return; }
+__jump_git_root() {
+    cd "$(git rev-parse --show-toplevel 2>/dev/null || print .)" || return
+    zle reset-prompt
+}
+zle -N __jump_git_root 2>/dev/null
+bindkey '^[g' __jump_git_root 2>/dev/null         # Alt-G  -> repo root
 
-bind -x '"\eg": __jump_git_root'            2>/dev/null   # Alt-G  -> repo root
-bind '"\C-o": "\C-a\C-k envhelp\C-m"'       2>/dev/null   # Ctrl-O -> cheatsheet
-bind '"\e[1;5C": forward-word'              2>/dev/null   # Ctrl-Right
-bind '"\e[1;5D": backward-word'             2>/dev/null   # Ctrl-Left
-bind '"\C-x\C-e": edit-and-execute-command' 2>/dev/null   # edit the line in $EDITOR
+__cheatsheet_widget() { BUFFER="envhelp"; zle accept-line; }
+zle -N __cheatsheet_widget 2>/dev/null
+bindkey '^O' __cheatsheet_widget 2>/dev/null      # Ctrl-O -> cheatsheet
+
+bindkey '^[[1;5C' forward-word 2>/dev/null        # Ctrl-Right
+bindkey '^[[1;5D' backward-word 2>/dev/null       # Ctrl-Left
+
+autoload -Uz edit-command-line
+zle -N edit-command-line 2>/dev/null
+bindkey '^X^E' edit-command-line 2>/dev/null      # edit the line in $EDITOR
