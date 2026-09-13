@@ -1,0 +1,32 @@
+# ==============================================================================
+#  my_environment — zsh entry point
+#  Sourced from ~/.zshrc. Prompt/theme/completion come from oh-my-zsh +
+#  Powerlevel10k; everything else in this file is my_environment's own,
+#  independent of the bash/ setup (see zsh/*.zsh).
+# ==============================================================================
+
+# Non-interactive shells (scp, rsync, scripts) must stay silent and fast.
+[[ -o interactive ]] || return
+
+: "${MY_ENV_ROOT:="$(cd -- "${0:A:h}/.." && pwd)"}"
+export MY_ENV_ROOT
+
+export ZSH="${MY_ENV_ZSH_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-zsh}"
+ZSH_THEME="powerlevel10k/powerlevel10k"
+# zsh-syntax-highlighting must be last: it wraps widgets the others define.
+plugins=(git zsh-autosuggestions zsh-peco-history zsh-syntax-highlighting)
+
+[[ -r "$ZSH/oh-my-zsh.sh" ]] && source "$ZSH/oh-my-zsh.sh"
+
+for _mod in env colors aliases functions options history integrations; do
+    [[ -r "$MY_ENV_ROOT/zsh/$_mod.zsh" ]] && source "$MY_ENV_ROOT/zsh/$_mod.zsh"
+done
+unset _mod
+
+# Machine-specific overrides, never committed.
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+[[ -r "$MY_ENV_ROOT/zsh/local.zsh" ]] && source "$MY_ENV_ROOT/zsh/local.zsh"
+
+# Powerlevel10k's config wizard writes here. Run `p10k configure` if it's
+# missing, or any time you want to redo the prompt setup.
+[[ -r "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"

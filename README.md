@@ -18,8 +18,8 @@ Then set your terminal font to **JetBrainsMono Nerd Font Mono** and open `nvim`.
 
 | | |
 |---|---|
-| **Shell** | Two-line git-aware prompt, 200k-entry shared history, colour everywhere |
-| **Suggestions** | Fish-style inline ghost text from your history (ble.sh) + `Ctrl-R` fuzzy search (fzf) |
+| **Shell** | bash by default (two-line git-aware prompt); optional zsh + oh-my-zsh + Powerlevel10k |
+| **Suggestions** | zsh: inline ghost text (zsh-autosuggestions) · bash: `Up`/`Down` prefix search · both: `Ctrl-R` fuzzy search (fzf) |
 | **Editor** | Neovim with Catppuccin Mocha, statusline, file tree, dashboard, 48 plugins |
 | **C/C++** | clangd IntelliSense: completion, diagnostics, inlay hints, refactors, header↔source |
 | **Debugging** | nvim-dap + codelldb, breakpoints and a variable inspector on `<F5>` |
@@ -40,6 +40,7 @@ it replaces to `~/.local/share/my_environment/backups/<timestamp>/`.
 ./install.sh --minimal       # skip fonts, extra CLI tools, debugger
 ./install.sh --no-fonts      # you already have a Nerd Font
 ./install.sh --no-nvim       # keep your existing Neovim binary
+./install.sh --no-zsh        # skip zsh/oh-my-zsh/powerlevel10k/plugins
 ./install.sh --no-claude     # skip the Claude Code CLI
 ./install.sh --help
 ```
@@ -50,15 +51,16 @@ root; everything else lands in `~/.local`.
 
 **What it touches**
 
-- appends one guarded block to `~/.bashrc` (everything else is sourced from this repo)
+- appends one guarded block to `~/.bashrc`, and another to `~/.zshrc` if zsh is installed (everything else is sourced from this repo)
 - symlinks `~/.config/nvim`, `~/.inputrc`, `~/.config/clangd/config.yaml`, `~/.clang-format`
-- installs Neovim, Nerd Fonts, ble.sh and optional CLI tools under `~/.local`
+- installs Neovim, Nerd Fonts, zsh + oh-my-zsh + powerlevel10k (optional) and other CLI tools under `~/.local`
+- removes any leftover ble.sh install from before my_environment switched to zsh for autosuggestions
 
 **Uninstall**
 
 ```bash
 ./uninstall.sh            # remove hooks and symlinks
-./uninstall.sh --purge    # also delete downloaded Neovim, plugins and ble.sh
+./uninstall.sh --purge    # also delete downloaded Neovim, plugins and oh-my-zsh
 ```
 
 ---
@@ -111,7 +113,13 @@ my_environment/
 │   ├── aliases.sh
 │   ├── functions.sh        # mkcd, extract, cc-db, ccrun, …
 │   ├── prompt.sh           # the git-aware prompt
-│   └── integrations.sh     # ble.sh, fzf, zoxide, key bindings
+│   └── integrations.sh     # fzf, zoxide, key bindings
+├── zsh/                    # optional — independent of bash/, same shape
+│   ├── zshrc               # entry point, sourced by ~/.zshrc; sets up
+│   │                       #   oh-my-zsh + powerlevel10k + plugins
+│   ├── env.zsh, colors.zsh, history.zsh, options.zsh
+│   ├── aliases.zsh, functions.zsh
+│   └── integrations.zsh    # zsh-autosuggestions, fzf, zoxide, key bindings
 ├── config/
 │   ├── clangd.yaml         # global clangd defaults
 │   ├── clang-format        # global fallback C++ style
@@ -125,8 +133,8 @@ my_environment/
         └── plugins/        # one file per concern
 ```
 
-Per-machine tweaks go in `~/.bashrc.local` — it is sourced last and never
-committed.
+Per-machine tweaks go in `~/.bashrc.local` (bash) or `~/.zshrc.local` (zsh) —
+each is sourced last and never committed.
 
 `nvim/lazy-lock.json` pins all 48 plugins to the exact commits this config was
 tested against, so every new machine gets the same known-good set instead of
@@ -141,25 +149,39 @@ empty `fillchars` entry is a hard startup error. Add new icons there.
 
 ## Shell highlights
 
-**History suggestions.** With ble.sh installed, the rest of your best-matching
-past command appears greyed out as you type; press `→` or `Ctrl-F` to accept it,
-`Alt-F` to take one word. Without ble.sh, `Up`/`Down` do prefix search instead
-(type `git ch`, press `Up`, walk only through matching entries). `Ctrl-R` is
-always fuzzy search over everything. Run `envhelp` to see which engine is live.
+**History suggestions.** bash's setup does `Up`/`Down` prefix search (type
+`git ch`, press `Up`, walk only through matching entries) — it has no inline
+ghost-text engine of its own. The zsh setup (see below) gets that for free
+from the zsh-autosuggestions plugin: the rest of your best-matching past
+command appears greyed out as you type; press `→`, `End` or `Ctrl-F` to accept
+it. `Ctrl-R` is always fuzzy search over everything, in both shells. Run
+`envhelp` to see which engine is live.
 
 History is 200k entries, timestamped, deduplicated, flushed after every command
-and shared live between open terminals.
+and shared live between open terminals — in bash and in zsh alike.
 
-**Prompt.** Shows user@host, path, branch with staged/dirty/untracked/ahead/behind
-counts, virtualenv, CMake build type, exit code, and the duration of anything
-that took over 3 seconds. It shells out to git exactly once per prompt.
+**Prompt.** bash's default is a two-line git-aware prompt: user@host, path,
+branch with staged/dirty/untracked/ahead/behind counts, virtualenv, CMake
+build type, exit code, and the duration of anything that took over 3 seconds.
+It shells out to git exactly once per prompt.
 
 Set `MY_ENV_ASCII=1` if your terminal has no Nerd Font, or
 `MY_ENV_PROMPT=starship` to use starship instead.
 
+**Zsh (optional).** `./install.sh` also sets up zsh with
+[oh-my-zsh](https://ohmyz.sh/), the [Powerlevel10k](https://github.com/romkatv/powerlevel10k)
+theme, and the zsh-autosuggestions, zsh-syntax-highlighting and
+zsh-peco-history plugins (the last needs `peco`, installed alongside it).
+Nothing changes your default shell automatically — try it with `exec zsh`,
+run `p10k configure` the first time to set up the prompt, and switch for good
+with `chsh -s "$(command -v zsh)"` once you're happy. It's a separate, fully
+independent config (`zsh/`, hooked into `~/.zshrc`) — bash keeps working
+exactly as before either way. Skip the whole stack with `./install.sh --no-zsh`.
+
 **Handy commands.** `cc-db` `ccrun` `ccasm` `gdbr` `mkcd` `up` `extract` `bak`
 `ff` `fif` `fkill` `fcd` `fgb` `hstats` `please` `whichf` `colortest`.
-`envhelp` documents them all; `envhelp git` filters to one section.
+`envhelp` documents them all; `envhelp git` filters to one section. (Available
+in both shells — zsh has its own copies under `zsh/`.)
 
 ---
 
@@ -233,5 +255,7 @@ your compile database.
 **Colours look flat** — you need a truecolor terminal. `colortest` shows what
 yours supports; the bottom gradient should be smooth, not banded.
 
-**Slow shell startup** — `MY_ENV_PROMPT=starship` and ble.sh both add a little.
-Time it with `time bash -lic exit`.
+**Slow shell startup** — `MY_ENV_PROMPT=starship` adds a little in bash; in
+zsh, oh-my-zsh's plugin loading is the usual culprit (p10k's own overhead is
+tiny — it's designed for this). Time it with `time bash -lic exit` or
+`time zsh -lic exit`.

@@ -16,14 +16,17 @@ PURGE=0
 
 printf '\nRemoving my_environment…\n\n'
 
-# 1. the ~/.bashrc block
-if grep -qF '# >>> my_environment >>>' "$HOME/.bashrc" 2>/dev/null; then
-    cp "$HOME/.bashrc" "$HOME/.bashrc.pre-uninstall"
-    sed -i '/# >>> my_environment >>>/,/# <<< my_environment <<</d' "$HOME/.bashrc"
-    ok "removed the ~/.bashrc block (previous copy: ~/.bashrc.pre-uninstall)"
-else
-    skip "no ~/.bashrc block found"
-fi
+# 1. the ~/.bashrc and ~/.zshrc blocks
+for _rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+    if grep -qF '# >>> my_environment >>>' "$_rc" 2>/dev/null; then
+        cp "$_rc" "$_rc.pre-uninstall"
+        sed -i '/# >>> my_environment >>>/,/# <<< my_environment <<</d' "$_rc"
+        ok "removed the $(basename "$_rc") block (previous copy: $(basename "$_rc").pre-uninstall)"
+    else
+        skip "no $(basename "$_rc") block found"
+    fi
+done
+unset _rc
 
 # 2. symlinks we created — only if they still point into this repo
 unlink_if_ours() {
@@ -40,7 +43,7 @@ unlink_if_ours "$HOME/.clang-format"
 unlink_if_ours "${XDG_CONFIG_HOME:-$HOME/.config}/clangd/config.yaml"
 
 # 3. binaries we installed into ~/.local/bin
-for b in nvim fd bat fzf; do
+for b in nvim fd bat fzf peco; do
     link="$HOME/.local/bin/$b"
     if [[ -L "$link" ]] && [[ "$(readlink -f "$link")" == "$STATE_DIR"* ]]; then
         rm -f "$link"; ok "unlinked $link"
@@ -52,8 +55,10 @@ if (( PURGE )); then
     rm -rf "$STATE_DIR/neovim"                          && ok "removed the Neovim install"
     rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/nvim"  && ok "removed Neovim plugins/data"
     rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/nvim" && ok "removed Neovim state"
-    rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/blesh" && ok "removed ble.sh"
-    printf '  %sfonts and shell history were kept%s\n' "$C_D" "$C_RST"
+    rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/blesh" && ok "removed legacy ble.sh (if present)"
+    rm -rf "${XDG_DATA_HOME:-$HOME/.local/share}/oh-my-zsh" && ok "removed oh-my-zsh (theme, plugins)"
+    rm -rf "$STATE_DIR/peco" && ok "removed peco"
+    printf '  %sfonts, shell history and ~/.p10k.zsh were kept%s\n' "$C_D" "$C_RST"
 fi
 
 printf '\nDone. Backups from install time are in %s/backups/\n' "$STATE_DIR"

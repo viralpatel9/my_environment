@@ -32,10 +32,9 @@ printf '  %ssuggestion engine: %s%s\n' "$D" "${MY_ENV_SUGGEST:-unknown}" "$R"
 
 if show suggestions; then
 section "HISTORY & SUGGESTIONS"
-if [[ -n "${BLE_VERSION-}" ]]; then
+if [[ "${MY_ENV_SUGGEST:-}" == *autosuggest* ]]; then
   row "→ (right arrow)"   "accept the greyed-out suggestion ahead of the cursor"
-  row "Ctrl-F"            "same as right arrow"
-  row "Alt-F"             "accept just the next word of the suggestion"
+  row "End / Ctrl-F"      "same as right arrow"
 else
   row "Up / Down"         "prefix search: type 'git ch' then Up to filter history"
 fi
@@ -122,7 +121,7 @@ fi
 if show tools; then
 section "TOOLS & MISC"
 row "envhelp [section]"  "this page  (Ctrl-O anywhere on the command line)"
-row "reload"             "restart bash with the new config"
+row "reload"             "restart the shell with the new config"
 row "colortest"          "check your terminal's colour support"
 row "whichf <name>"      "what is this? alias, function or binary — with source"
 row "hlp <cmd>"          "syntax-highlighted --help output"
